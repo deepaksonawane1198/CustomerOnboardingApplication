@@ -75,9 +75,10 @@ public class OnboardingOrchestrator
 
         if (request.RiskScore >= 70)
         {
+            using var timeoutCts = new CancellationTokenSource();
             var approvalTimeoutAt = context.CurrentUtcDateTime.AddMinutes(5);
             var approvalTask = context.WaitForExternalEvent<ApprovalDecision>(WorkflowConstants.ManualApprovalEventName);
-            var timeoutTask = context.CreateTimer(approvalTimeoutAt, CancellationToken.None);
+            var timeoutTask = context.CreateTimer(approvalTimeoutAt, timeoutCts.Token);
             var winner = await Task.WhenAny(approvalTask, timeoutTask);
             if (winner == timeoutTask)
             {
@@ -86,6 +87,7 @@ public class OnboardingOrchestrator
                 result.FinishedAtUtc = context.CurrentUtcDateTime;
                 return result;
             }
+            timeoutCts.Cancel();
             var approval = await approvalTask;
             if (!approval.Approved)
             {

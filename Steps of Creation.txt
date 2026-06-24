@@ -58,3 +58,8 @@ Step 40 - Add provisioning activity
 Step 41 - Create provisioning interface(Services/Interfaces/IProvisioningService.cs)
 Step 42 - Create provisioning service(Services/ProvisioningService.cs)
 Step 43 - Register service in Program.cs(services.AddSingleton<IProvisioningService, ProvisioningService>();)
+Step 44 - Create activity(Functions/Durable/Activities/ProvisionVendorActivity.cs)
+Step 45 - Add retry logic in orchestrator
+Step 46 - Create compensation activity(Functions/Durable/Activities/CompensationActivity.cs)
+
+Step 47 - Add status endpoint (Functions/Http/GetWorkflowStatusFunction.cs)
