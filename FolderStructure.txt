@@ -1,0 +1,41 @@
+ABC.Workflow.StatefulOnboarding.FunctionApp/
+│
+├── Common/
+│   ├── Helpers/
+│   ├── Logging/
+│   ├── Exceptions/
+│   └── Connectors/
+│       ├── Http/
+│       └── Sftp/
+│
+├── Functions/
+│   ├── Http/
+│   ├── Sftp/
+│   ├── Durable/
+│   │   ├── Orchestrators/
+│   │   └── Activities/
+│   └── Health/
+│
+├── Models/
+│   ├── Requests/
+│   ├── Responses/
+│   ├── Events/
+│   └── Domain/
+│
+├── Services/
+│   ├── Interfaces/
+│   └── Services.cs
+│
+├── Repositories/
+│   ├── Database/
+│   ├── ServiceBus/
+│   ├── Sql/
+│   └── ThirdParty/
+│
+├── OpenApi/
+│
+├── host.json
+├── local.settings.json
+├── appsettings.json
+├── Program.cs
+└── ABC.Workflow.StatefulOnboarding.FunctionApp.csproj

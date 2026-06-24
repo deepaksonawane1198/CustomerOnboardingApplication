@@ -1,0 +1,60 @@
+Step 1 - Create Folder (ABC.Workflow.StatefulOnboarding.FunctionApp)
+Step 2 - Initialize Azure Function App by running command in above folder (func init . --worker-runtime dotnet-isolated --target-framework net8.0)
+Step 3 - Create your folder structure manually
+Step 4 - Add required NuGet packages in ABC.Workflow.StatefulOnboarding.FunctionApp.csproj
+Step 5 - Now run the commands to Compile base project.
+			dotnet restore
+			dotnet build
+Step 6 - Add startup and configuration in Program.cs
+Step 7 - Create appsettings.json
+Step 8 - Update local.settings.json
+Step 9 - Now add models first
+			Create request models (Models/Requests/OnboardingRequest.cs)
+								  (Models/Requests/ApprovalRequest.cs)
+			Create response models(Models/Responses/WorkflowStartResponse.cs)
+								  (Models/Responses/WorkflowStatusResponse.cs)
+Step 10 - Create event model(Models/Events/OnboardingEvent.cs)
+Step 11 - Create domain models (Models/Domain/DocumentMetadata.cs)
+							   (Models/Domain/CheckResult.cs)
+							   (Models/Domain/ApprovalDecision.cs)
+							   (Models/Domain/ProvisioningResult.cs)
+							   (Models/Domain/WorkflowExecutionResult.cs)
+Step 12 - Create health function(Functions/Health/HealthFunction.cs)
+Step 13 - Run and test
+			func start
+Step 14 - Create starter HTTP function(Functions/Http/StartOnboardingFunction.cs)
+Step 15 - Create minimal orchestrator first(Functions/Durable/Orchestrators/OnboardingOrchestrator.cs)
+Step 16 - Add first activity (validation). Create validation helper(Common/Helpers/OnboardingRequestValidator.cs)
+
+Step 17 - Create validation activity(Functions/Durable/Activities/ValidatePayloadActivity.cs)
+Step 18 - Add workflow settings model(Models/Domain/WorkflowSettings.cs)
+Step 19 - Create document validation activity(Functions/Durable/Activities/ValidateDocumentsActivity.cs)
+Step 20 - Add this activity into orchestrator In OnboardingOrchestrator.cs, after payload validation.
+
+Step 21 - Add duplicate check. Create repository interface(Services/Interfaces/IDuplicateRepository.cs)
+Step 22 - Create in-memory repository(Repositories/InMemoryDuplicateRepository.cs)
+Step 23 - Register in Program.cs(services.AddSingleton<IDuplicateRepository, InMemoryDuplicateRepository>();)
+Step 24 - Create duplicate check activity(Functions/Durable/Activities/DuplicateCheckActivity.cs)
+Step 25 - Add to orchestrator(Duplicate check)
+
+Step 26 - Add compliance check. Create interface(Services/Interfaces/IComplianceService.cs)
+Step 27 - Create service(Services/ComplianceService.cs)
+Step 28 - Register in Program.cs(services.AddSingleton<IComplianceService, ComplianceService>();)
+Step 29 - Create activity(Functions/Durable/Activities/ComplianceCheckActivity.cs)
+Step 30 - Add to orchestrator(Compliance check)
+
+Step 31 - Add fraud / risk check. Create interface(Services/Interfaces/IFraudService.cs)
+Step 32 - Create service(Services/FraudService.cs)
+Step 33 - Register in Program.cs(services.AddSingleton<IFraudService, FraudService>();)
+Step 34 - Create activity(Functions/Durable/Activities/FraudCheckActivity.cs)
+Step 35 - Add to orchestrator(Fraud check)
+
+Step 36 - Add manual approval callback function
+Step 37 - Create constants file(Common/Helpers/WorkflowConstants.cs)
+Step 38 - Create approval callback function(Functions/Http/ApprovalCallbackFunction.cs)
+Step 39 - Add wait for approval in orchestrator
+
+Step 40 - Add provisioning activity
+Step 41 - Create provisioning interface(Services/Interfaces/IProvisioningService.cs)
+Step 42 - Create provisioning service(Services/ProvisioningService.cs)
+Step 43 - Register service in Program.cs(services.AddSingleton<IProvisioningService, ProvisioningService>();)

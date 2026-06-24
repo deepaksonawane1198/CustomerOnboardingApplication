@@ -1,0 +1,9 @@
+{
+  "profiles": {
+    "ABC_Workflow_StatefulOnboarding_FunctionApp": {
+      "commandName": "Project",
+      "commandLineArgs": "--port 7000",
+      "launchBrowser": false
+    }
+  }
+}
