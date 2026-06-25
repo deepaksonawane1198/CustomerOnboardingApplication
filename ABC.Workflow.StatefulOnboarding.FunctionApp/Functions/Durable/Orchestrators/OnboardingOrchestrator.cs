@@ -21,81 +21,76 @@ public class OnboardingOrchestrator
             Status = "InProgress",
             StartedAtUtc = context.CurrentUtcDateTime
         };
-
-        var validationResult = await context.CallActivityAsync<CheckResult>(nameof(ValidatePayloadActivity), request);
+    
+        // Step 1 - Validate payload first
+        var validationResult = await context.CallActivityAsync<CheckResult>(nameof(ValidatePayloadActivity),request);
         result.StageResults.Add(validationResult);
+
         if (!validationResult.IsSuccess)
         {
-            result.Status = "Rejected";
-            result.FinalReason = validationResult.Reason;
-            result.FinishedAtUtc = context.CurrentUtcDateTime;
-            return result;
-        }
-        
-        var documentResult = await context.CallActivityAsync<CheckResult>(nameof(ValidateDocumentsActivity), request);
-        result.StageResults.Add(documentResult);
-
-        if (!documentResult.IsSuccess)
-        {
-            result.Status = "Rejected";
-            result.FinalReason = documentResult.Reason;
-            result.FinishedAtUtc = context.CurrentUtcDateTime;
-            return result;
+            return await RejectAsync(context, result, validationResult.Reason, "Rejected");
         }
 
-        var duplicateResult = await context.CallActivityAsync<CheckResult>(nameof(DuplicateCheckActivity), request);
-        result.StageResults.Add(duplicateResult);
-        if (!duplicateResult.IsSuccess)
+        // Step 2 - Run all 4 checks in parallel
+        var checks = new[]
         {
-            result.Status = "Rejected";
-            result.FinalReason = duplicateResult.Reason;
-            result.FinishedAtUtc = context.CurrentUtcDateTime;
-            return result;
-        }
+            context.CallActivityAsync<CheckResult>(nameof(ValidateDocumentsActivity), request),
+            context.CallActivityAsync<CheckResult>(nameof(DuplicateCheckActivity), request),
+            context.CallActivityAsync<CheckResult>(nameof(ComplianceCheckActivity), request),
+            context.CallActivityAsync<CheckResult>(nameof(FraudCheckActivity), request)
+        };
 
-        var complianceResult = await context.CallActivityAsync<CheckResult>(nameof(ComplianceCheckActivity), request);
-        result.StageResults.Add(complianceResult);
-        if (!complianceResult.IsSuccess)
-        {
-            result.Status = "Rejected";
-            result.FinalReason = complianceResult.Reason;
-            result.FinishedAtUtc = context.CurrentUtcDateTime;
-            return result;
-        }
+        // Step 3 - Wait until all 4 complete
+        await Task.WhenAll(checks);
 
-        var fraudResult = await context.CallActivityAsync<CheckResult>(nameof(FraudCheckActivity), request);
-        result.StageResults.Add(fraudResult);
-        if (!fraudResult.IsSuccess)
+        // Step 4 - Add all results into the workflow result
+        result.StageResults.AddRange(checks.Select(t => t.Result));
+
+        // Step 5 - If any one failed, reject immediately
+        var firstFailure = result.StageResults.FirstOrDefault(r => !r.IsSuccess);
+        if (firstFailure is not null)
         {
-            result.Status = "Rejected";
-            result.FinalReason = fraudResult.Reason;
-            result.FinishedAtUtc = context.CurrentUtcDateTime;
-            return result;
+            return await RejectAsync(context, result, firstFailure.Reason, "Rejected");
         }
 
         if (request.RiskScore >= 70)
         {
+            await context.CallActivityAsync(nameof(UpdateWorkflowAuditActivity), new WorkflowAuditUpdate
+            {
+                InstanceId = context.InstanceId,
+                WorkflowStatus = "InProgress",
+                CurrentStage = "ManualApprovalPending",
+                FinalReason = null,
+                DownstreamRecordId = null,
+                LastUpdatedAtUtc = context.CurrentUtcDateTime
+            });
+
             using var timeoutCts = new CancellationTokenSource();
             var approvalTimeoutAt = context.CurrentUtcDateTime.AddMinutes(5);
             var approvalTask = context.WaitForExternalEvent<ApprovalDecision>(WorkflowConstants.ManualApprovalEventName);
             var timeoutTask = context.CreateTimer(approvalTimeoutAt, timeoutCts.Token);
             var winner = await Task.WhenAny(approvalTask, timeoutTask);
+
             if (winner == timeoutTask)
             {
-                result.Status = "Rejected";
-                result.FinalReason = "Manual approval timed out.";
-                result.FinishedAtUtc = context.CurrentUtcDateTime;
-                return result;
+               return await RejectAsync(context, result, "Manual approval timed out.", "Rejected");
             }
             timeoutCts.Cancel();
             var approval = await approvalTask;
             if (!approval.Approved)
             {
-                result.Status = "Rejected";
-                result.FinalReason = $"Manual approval rejected. {approval.Reason}";
-                result.FinishedAtUtc = context.CurrentUtcDateTime;
-                return result;
+                return await RejectAsync(context, result, $"Manual approval rejected. {approval.Reason}", "Rejected");
             }
+
+            await context.CallActivityAsync(nameof(UpdateWorkflowAuditActivity), new WorkflowAuditUpdate
+            {
+                InstanceId = context.InstanceId,
+                WorkflowStatus = "Completed",
+                CurrentStage = "Completed",
+                FinalReason = approval.Reason,
+                DownstreamRecordId = null,
+                LastUpdatedAtUtc = context.CurrentUtcDateTime
+            });     
             result.StageResults.Add(CheckResult.Success("ManualApproval"));
         }
 
@@ -117,6 +112,15 @@ public class OnboardingOrchestrator
 
             if (provisioning.IsTransientFailure && attempt < 3)
             {
+                await context.CallActivityAsync(nameof(UpdateWorkflowAuditActivity), new WorkflowAuditUpdate
+                {
+                    InstanceId = context.InstanceId,
+                    WorkflowStatus = "InProgress",
+                    CurrentStage = $"ProvisioningRetry-{attempt}",
+                    FinalReason = provisioning.Reason,
+                    DownstreamRecordId = null,
+                    LastUpdatedAtUtc = context.CurrentUtcDateTime
+                });
                 var retryAt = context.CurrentUtcDateTime.AddSeconds(Math.Pow(2, attempt) * 5);
                 await context.CreateTimer(retryAt, CancellationToken.None);
                 continue;
@@ -129,15 +133,39 @@ public class OnboardingOrchestrator
                 nameof(CompensationActivity),
                 new CompensationRequest(request, provisioning.Reason));
 
-            result.Status = "TechnicalFailure";
-            result.FinalReason = provisioning.Reason;
-            result.FinishedAtUtc = context.CurrentUtcDateTime;
-            return result;
+            return await RejectAsync(context, result, provisioning.Reason, "TechnicalFailure");
         }
 
+        // Step 6 - If all checks passed, mark completed for now
         result.DownstreamRecordId = provisioning.DownstreamRecordId;
         result.Status = "Completed";
         result.FinishedAtUtc = context.CurrentUtcDateTime;
+        await context.CallActivityAsync(nameof(UpdateWorkflowAuditActivity), new WorkflowAuditUpdate
+            {
+                InstanceId = context.InstanceId,
+                WorkflowStatus = "Completed",
+                CurrentStage = "Completed",
+                FinalReason = null,
+                DownstreamRecordId = provisioning.DownstreamRecordId,
+                LastUpdatedAtUtc = context.CurrentUtcDateTime
+            }); 
+        return result;
+    }
+    private static async Task<WorkflowExecutionResult> RejectAsync(TaskOrchestrationContext context,WorkflowExecutionResult result,string reason,
+    string finalStatus)
+    {
+        result.Status = finalStatus;
+        result.FinalReason = reason;
+        result.FinishedAtUtc = context.CurrentUtcDateTime;
+        await context.CallActivityAsync(nameof(UpdateWorkflowAuditActivity), new WorkflowAuditUpdate
+        {
+            InstanceId = context.InstanceId,
+            WorkflowStatus = finalStatus,
+            CurrentStage = finalStatus,
+            FinalReason = reason,
+            DownstreamRecordId = null,
+            LastUpdatedAtUtc = context.CurrentUtcDateTime
+        });
         return result;
     }
 }

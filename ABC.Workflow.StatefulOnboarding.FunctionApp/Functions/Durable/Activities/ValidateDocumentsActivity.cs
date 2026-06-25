@@ -18,18 +18,8 @@ public class ValidateDocumentsActivity
     [Function(nameof(ValidateDocumentsActivity))]
     public CheckResult Run([ActivityTrigger] OnboardingRequest request)
     {
-        var documentTypes = request.Documents
-            .Select(d => d.Type)
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-        var missing = _settings.RequiredVendorDocuments
-            .Where(required => !documentTypes.Contains(required))
-            .ToList();
-
-        if (missing.Count == 0)
-        {
-            return CheckResult.Success("ValidateDocuments");
-        }
+        var documentTypes = request.Documents.Select(d => d.Type).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var missing = _settings.RequiredVendorDocuments.Where(required => !documentTypes.Contains(required)).ToList();
 
         return missing.Count == 0
             ? CheckResult.Success("ValidateDocuments")

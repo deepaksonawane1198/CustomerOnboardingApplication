@@ -1,0 +1,515 @@
+Stateful Onboarding Workflow - End-to-End Test Cases
+=====================================================
+
+Application Under Test
+----------------------
+Azure Functions .NET Isolated + Durable Functions based onboarding workflow.
+
+Available APIs
+--------------
+1. GET  /api/health
+2. POST /api/workflow/start
+3. GET  /api/workflow/status/{instanceId}
+4. POST /api/workflow/approve/{instanceId}
+
+General Notes
+-------------
+- For every POST /api/workflow/start request, capture the returned instanceId.
+- For long-running workflows, wait 2–5 seconds before calling the status API unless the test explicitly says otherwise.
+- For high-risk flows (riskScore >= 70), status will remain Running until approval or timeout happens.
+- Output in status remains null until orchestration completes.
+
+Base Valid Request Template
+---------------------------
+{
+  "applicationId": "APP-2026-00001",
+  "applicantType": "Vendor",
+  "companyName": "Contoso Supplies Pvt Ltd",
+  "taxId": "GSTIN-29ABCDE1234F1Z5",
+  "country": "IN",
+  "contactEmail": "ops@contoso-supplies.com",
+  "riskScore": 40,
+  "documents": [
+    { "type": "PAN", "fileName": "pan.pdf" },
+    { "type": "GST", "fileName": "gst.pdf" },
+    { "type": "BankLetter", "fileName": "bankletter.pdf" }
+  ],
+  "sourceSystem": "VendorPortal",
+  "submittedAt": "2026-06-24T10:00:00Z"
+}
+
+======================================================================
+TC-01 — Health Check
+======================================================================
+Objective:
+Verify that the Function App is up and reachable.
+
+API:
+GET /api/health
+
+Expected Result:
+- HTTP 200 OK
+- Response body: Healthy
+
+======================================================================
+TC-02 — Happy Path (Low Risk, Auto Approval)
+======================================================================
+Objective:
+Verify complete success flow when riskScore is below 70.
+
+Request Payload:
+{
+  "applicationId": "APP-2026-00001",
+  "applicantType": "Vendor",
+  "companyName": "Contoso Supplies Pvt Ltd",
+  "taxId": "GSTIN-29ABCDE1234F1Z5",
+  "country": "IN",
+  "contactEmail": "ops@contoso-supplies.com",
+  "riskScore": 40,
+  "documents": [
+    { "type": "PAN", "fileName": "pan.pdf" },
+    { "type": "GST", "fileName": "gst.pdf" },
+    { "type": "BankLetter", "fileName": "bankletter.pdf" }
+  ],
+  "sourceSystem": "VendorPortal",
+  "submittedAt": "2026-06-24T10:00:00Z"
+}
+
+Steps:
+1. POST /api/workflow/start
+2. Capture instanceId
+3. Wait 2–5 seconds
+4. GET /api/workflow/status/{instanceId}
+
+Expected Result:
+- Start API returns HTTP 202 Accepted
+- Final status API returns RuntimeStatus = Completed
+- Output is populated
+- Output.Status = Completed
+- Output.DownstreamRecordId = VENDOR-APP-2026-00001
+- StageResults should show success for:
+  - ValidatePayload
+  - ValidateDocuments
+  - DuplicateCheck
+  - Compliance
+  - Fraud
+
+======================================================================
+TC-03 — High Risk → Manual Approval → Approved
+======================================================================
+Objective:
+Verify that high-risk workflow pauses for approval and completes after approval.
+
+Request Payload:
+{
+  "applicationId": "APP-2026-00002",
+  "applicantType": "Vendor",
+  "companyName": "High Risk Vendor Pvt Ltd",
+  "taxId": "GSTIN-29ABCDE1234F1Z6",
+  "country": "IN",
+  "contactEmail": "risk@vendor.com",
+  "riskScore": 85,
+  "documents": [
+    { "type": "PAN", "fileName": "pan.pdf" },
+    { "type": "GST", "fileName": "gst.pdf" },
+    { "type": "BankLetter", "fileName": "bankletter.pdf" }
+  ],
+  "sourceSystem": "VendorPortal",
+  "submittedAt": "2026-06-24T10:05:00Z"
+}
+
+Approval Payload:
+{
+  "approved": true,
+  "reviewedBy": "Deepak",
+  "reason": "Manual review completed and approved"
+}
+
+Steps:
+1. POST /api/workflow/start
+2. Capture instanceId
+3. GET /api/workflow/status/{instanceId}
+4. Verify workflow is waiting (Running, Output null)
+5. POST /api/workflow/approve/{instanceId}
+6. Wait 2–5 seconds
+7. GET /api/workflow/status/{instanceId}
+
+Expected Result:
+- Before approval: RuntimeStatus = Running, Output = null
+- Approval API returns HTTP 202 Accepted
+- After approval: RuntimeStatus = Completed
+- Output.Status = Completed
+- Output.DownstreamRecordId = VENDOR-APP-2026-00002
+- StageResults contains ManualApproval success (if your final implementation adds it)
+
+======================================================================
+TC-04 — High Risk → Manual Approval → Rejected
+======================================================================
+Objective:
+Verify manual rejection path.
+
+Request Payload:
+{
+  "applicationId": "APP-2026-00003",
+  "applicantType": "Vendor",
+  "companyName": "Rejected Risk Vendor Pvt Ltd",
+  "taxId": "GSTIN-29ABCDE1234F1Z7",
+  "country": "IN",
+  "contactEmail": "reject@vendor.com",
+  "riskScore": 90,
+  "documents": [
+    { "type": "PAN", "fileName": "pan.pdf" },
+    { "type": "GST", "fileName": "gst.pdf" },
+    { "type": "BankLetter", "fileName": "bankletter.pdf" }
+  ],
+  "sourceSystem": "VendorPortal",
+  "submittedAt": "2026-06-24T10:10:00Z"
+}
+
+Approval Payload:
+{
+  "approved": false,
+  "reviewedBy": "Deepak",
+  "reason": "Risk too high"
+}
+
+Steps:
+1. Start workflow
+2. Confirm Running before approval
+3. Send approval callback with approved=false
+4. Check final status
+
+Expected Result:
+- RuntimeStatus = Completed
+- Output.Status = Rejected
+- Output.FinalReason = Manual approval rejected. Risk too high
+
+======================================================================
+TC-05 — High Risk → No Approval → Timeout
+======================================================================
+Objective:
+Verify timeout path when approval is not sent.
+
+Request Payload:
+{
+  "applicationId": "APP-2026-00004",
+  "applicantType": "Vendor",
+  "companyName": "Timeout Approval Vendor Pvt Ltd",
+  "taxId": "GSTIN-29ABCDE1234F1Z8",
+  "country": "IN",
+  "contactEmail": "timeout@vendor.com",
+  "riskScore": 80,
+  "documents": [
+    { "type": "PAN", "fileName": "pan.pdf" },
+    { "type": "GST", "fileName": "gst.pdf" },
+    { "type": "BankLetter", "fileName": "bankletter.pdf" }
+  ],
+  "sourceSystem": "VendorPortal",
+  "submittedAt": "2026-06-24T10:15:00Z"
+}
+
+Steps:
+1. Start workflow
+2. Do not call approval API
+3. Wait beyond configured approval timeout (e.g. 5 minutes)
+4. Check status
+
+Expected Result:
+- RuntimeStatus = Completed
+- Output.Status = Rejected
+- Output.FinalReason = Manual approval timed out.
+
+======================================================================
+TC-06 — Invalid Payload (Blank Required Fields)
+======================================================================
+Objective:
+Verify payload validation failure.
+
+Request Payload:
+{
+  "applicationId": "",
+  "applicantType": "",
+  "companyName": "",
+  "taxId": "",
+  "country": "",
+  "contactEmail": "",
+  "riskScore": 80,
+  "documents": [],
+  "sourceSystem": "VendorPortal",
+  "submittedAt": "2026-06-24T10:15:00Z"
+}
+
+Expected Result:
+If validation is implemented in API layer:
+- HTTP 400 Bad Request
+
+If validation is only in workflow:
+- Start returns 202 Accepted
+- Final workflow status returns:
+  - RuntimeStatus = Completed
+  - Output.Status = Rejected
+  - Output.FinalReason contains missing field messages
+
+======================================================================
+TC-07 — Missing Required Documents
+======================================================================
+Objective:
+Verify document validation failure when mandatory documents are missing.
+
+Request Payload:
+{
+  "applicationId": "APP-2026-00005",
+  "applicantType": "Vendor",
+  "companyName": "Missing Docs Vendor Pvt Ltd",
+  "taxId": "GSTIN-29ABCDE1234F1Z9",
+  "country": "IN",
+  "contactEmail": "docs@vendor.com",
+  "riskScore": 20,
+  "documents": [
+    { "type": "PAN", "fileName": "pan.pdf" }
+  ],
+  "sourceSystem": "VendorPortal",
+  "submittedAt": "2026-06-24T10:20:00Z"
+}
+
+Expected Result:
+- RuntimeStatus = Completed
+- Output.Status = Rejected
+- Output.FinalReason = Missing required documents: GST, BankLetter
+- StageResults.ValidateDocuments should be failure
+
+======================================================================
+TC-08 — Duplicate TaxId
+======================================================================
+Objective:
+Verify duplicate check failure.
+
+Request Payload:
+{
+  "applicationId": "APP-2026-00006",
+  "applicantType": "Vendor",
+  "companyName": "Duplicate Vendor Pvt Ltd",
+  "taxId": "GSTIN-DUP-0001",
+  "country": "IN",
+  "contactEmail": "duplicate@vendor.com",
+  "riskScore": 20,
+  "documents": [
+    { "type": "PAN", "fileName": "pan.pdf" },
+    { "type": "GST", "fileName": "gst.pdf" },
+    { "type": "BankLetter", "fileName": "bankletter.pdf" }
+  ],
+  "sourceSystem": "VendorPortal",
+  "submittedAt": "2026-06-24T10:25:00Z"
+}
+
+Expected Result:
+- RuntimeStatus = Completed
+- Output.Status = Rejected
+- Output.FinalReason = Duplicate taxId found.
+
+======================================================================
+TC-09 — Compliance Failure (Unsupported Country)
+======================================================================
+Objective:
+Verify compliance rejection when country is unsupported.
+
+Request Payload:
+{
+  "applicationId": "APP-2026-00007",
+  "applicantType": "Vendor",
+  "companyName": "US Vendor Pvt Ltd",
+  "taxId": "GSTIN-29ABCDE1234F1Y1",
+  "country": "US",
+  "contactEmail": "us@vendor.com",
+  "riskScore": 20,
+  "documents": [
+    { "type": "PAN", "fileName": "pan.pdf" },
+    { "type": "GST", "fileName": "gst.pdf" },
+    { "type": "BankLetter", "fileName": "bankletter.pdf" }
+  ],
+  "sourceSystem": "VendorPortal",
+  "submittedAt": "2026-06-24T10:30:00Z"
+}
+
+Expected Result:
+- RuntimeStatus = Completed
+- Output.Status = Rejected
+- Output.FinalReason = Country is not enabled for this workflow.
+
+======================================================================
+TC-10 — Compliance Failure (Blocked Company)
+======================================================================
+Objective:
+Verify compliance rejection when company is blocked.
+
+Request Payload:
+{
+  "applicationId": "APP-2026-00008",
+  "applicantType": "Vendor",
+  "companyName": "Blocked Vendor Pvt Ltd",
+  "taxId": "GSTIN-29ABCDE1234F1Y2",
+  "country": "IN",
+  "contactEmail": "blocked@vendor.com",
+  "riskScore": 20,
+  "documents": [
+    { "type": "PAN", "fileName": "pan.pdf" },
+    { "type": "GST", "fileName": "gst.pdf" },
+    { "type": "BankLetter", "fileName": "bankletter.pdf" }
+  ],
+  "sourceSystem": "VendorPortal",
+  "submittedAt": "2026-06-24T10:35:00Z"
+}
+
+Expected Result:
+- RuntimeStatus = Completed
+- Output.Status = Rejected
+- Output.FinalReason = Company is blocked by compliance rules.
+
+======================================================================
+TC-11 — Provisioning Success
+======================================================================
+Objective:
+Verify provisioning success for a valid low-risk request.
+
+Request Payload:
+{
+  "applicationId": "APP-2026-00009",
+  "applicantType": "Vendor",
+  "companyName": "Provision Success Vendor Pvt Ltd",
+  "taxId": "GSTIN-29ABCDE1234F1Y3",
+  "country": "IN",
+  "contactEmail": "success@vendor.com",
+  "riskScore": 50,
+  "documents": [
+    { "type": "PAN", "fileName": "pan.pdf" },
+    { "type": "GST", "fileName": "gst.pdf" },
+    { "type": "BankLetter", "fileName": "bankletter.pdf" }
+  ],
+  "sourceSystem": "VendorPortal",
+  "submittedAt": "2026-06-24T10:40:00Z"
+}
+
+Expected Result:
+- RuntimeStatus = Completed
+- Output.Status = Completed
+- Output.DownstreamRecordId = VENDOR-APP-2026-00009
+
+======================================================================
+TC-12 — Provisioning Transient Failure → Retry → Compensation
+======================================================================
+Objective:
+Verify retry and compensation logic.
+
+Request Payload:
+{
+  "applicationId": "APP-2026-00010",
+  "applicantType": "Vendor",
+  "companyName": "Timeout Vendor Pvt Ltd",
+  "taxId": "GSTIN-29ABCDE1234F1Y4",
+  "country": "IN",
+  "contactEmail": "timeout@vendor.com",
+  "riskScore": 50,
+  "documents": [
+    { "type": "PAN", "fileName": "pan.pdf" },
+    { "type": "GST", "fileName": "gst.pdf" },
+    { "type": "BankLetter", "fileName": "bankletter.pdf" }
+  ],
+  "sourceSystem": "VendorPortal",
+  "submittedAt": "2026-06-24T10:45:00Z"
+}
+
+Expected Result:
+- RuntimeStatus = Completed
+- Output.Status = TechnicalFailure
+- Output.FinalReason = Downstream provisioning timed out in the simulation.
+- Retries should occur before failure
+- Compensation activity should run
+
+======================================================================
+TC-13 — Status API with Invalid InstanceId
+======================================================================
+Objective:
+Verify invalid status lookup handling.
+
+API:
+GET /api/workflow/status/invalid-instance-id
+
+Expected Result:
+- HTTP 404 Not Found
+- Response: No orchestration instance found for invalid-instance-id.
+
+======================================================================
+TC-14 — Approval API with Invalid InstanceId
+======================================================================
+Objective:
+Verify approval request against invalid orchestration id.
+
+API:
+POST /api/workflow/approve/invalid-instance-id
+
+Payload:
+{
+  "approved": true,
+  "reviewedBy": "Deepak",
+  "reason": "Testing wrong instance"
+}
+
+Expected Result:
+- Likely 202 Accepted from API
+- No valid workflow should progress
+
+======================================================================
+TC-15 — Multiple Approval Calls for Same Instance
+======================================================================
+Objective:
+Verify behavior when the approval callback is invoked more than once.
+
+Steps:
+1. Start a high-risk workflow
+2. Approve once
+3. Approve again with same instance id
+
+Expected Result:
+- First approval resumes workflow
+- Second approval should not meaningfully affect completed/already-progressed workflow
+
+======================================================================
+Recommended Execution Order
+======================================================================
+1. TC-01 — Health Check
+2. TC-02 — Happy Path (Low Risk)
+3. TC-03 — High Risk Approved
+4. TC-04 — High Risk Rejected
+5. TC-05 — Approval Timeout
+6. TC-06 — Invalid Payload
+7. TC-07 — Missing Documents
+8. TC-08 — Duplicate TaxId
+9. TC-09 — Unsupported Country
+10. TC-10 — Blocked Company
+11. TC-11 — Provisioning Success
+12. TC-12 — Retry + Compensation
+13. TC-13 — Invalid Status Lookup
+14. TC-14 — Invalid Approval Instance
+15. TC-15 — Duplicate Approval Calls
+
+======================================================================
+What To Verify For Every Test
+======================================================================
+1. Start API response
+   - 202 or 400 as expected
+2. Workflow status API
+   - Running / Completed as expected
+3. Final output
+   - Correct Status
+   - Correct FinalReason
+   - Correct DownstreamRecordId (if applicable)
+4. Logs
+   - Approval callback execution
+   - Activity results
+   - Retry / compensation steps
+5. Database (if enabled)
+   - Request persisted
+   - Status updated
+   - CurrentStage updated
+6. Service Bus (if enabled)
+   - Correct event published for success or failure

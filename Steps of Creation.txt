@@ -63,3 +63,17 @@ Step 45 - Add retry logic in orchestrator
 Step 46 - Create compensation activity(Functions/Durable/Activities/CompensationActivity.cs)
 
 Step 47 - Add status endpoint (Functions/Http/GetWorkflowStatusFunction.cs)
+
+Step 48 - Add SQL connection string in local.settings.json
+Step 49 - Add required NuGet package
+Step 50 - Create DB models
+			Models/Domain/WorkflowAuditRecord.cs
+			Models/Domain/WorkflowAuditUpdate.cs
+Step 51 - Create repository interface
+			Services/Interfaces/IWorkflowAuditRepository.cs
+Step 52 - Create SQL repository implementation
+			Repositories/SqlWorkflowAuditRepository.cs
+Step 53 - Register repository in Program.cs
+Step 54 - Insert initial request + instance id in StartOnboardingFunction
+Step 55 - Create activity to update workflow status/stage(Functions/Durable/Activities/UpdateWorkflowAuditActivity.cs)
+Step 56 - Update orchestrator to maintain DB status/stage

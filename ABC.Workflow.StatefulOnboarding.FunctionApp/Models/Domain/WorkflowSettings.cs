@@ -2,6 +2,7 @@ namespace ABC.Workflow.StatefulOnboarding.FunctionApp.Models.Domain;
 
 public class WorkflowSettings
 {
+    public const string SectionName = "WorkflowSettings";
     public int AutoApprovalRiskThreshold { get; set; } = 70;
     public int ApprovalTimeoutMinutes { get; set; } = 5;
     public List<string> RequiredVendorDocuments { get; set; } = new();
