@@ -1,5 +1,5 @@
-using ABC.Workflow.StatefulOnboarding.FunctionApp.Models.Domain;
-using ABC.Workflow.StatefulOnboarding.FunctionApp.Services.Interfaces;
+using ABC.Workflow.StatefulOnboarding.FunctionApp.Repositories.CustomerMasterSystem.Models;
+using ABC.Workflow.StatefulOnboarding.FunctionApp.Repositories.CustomerMasterSystem.Interfaces;
 using Microsoft.Azure.Functions.Worker;
 
 namespace ABC.Workflow.StatefulOnboarding.FunctionApp.Functions.Durable.Activities;

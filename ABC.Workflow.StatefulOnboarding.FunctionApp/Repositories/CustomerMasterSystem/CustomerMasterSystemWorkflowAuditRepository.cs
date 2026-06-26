@@ -1,35 +1,25 @@
-using ABC.Workflow.StatefulOnboarding.FunctionApp.Models.Domain;
-using ABC.Workflow.StatefulOnboarding.FunctionApp.Services.Interfaces;
+using ABC.Workflow.StatefulOnboarding.FunctionApp.Common.Connectors;
+using ABC.Workflow.StatefulOnboarding.FunctionApp.Repositories.CustomerMasterSystem.Interfaces;
+using ABC.Workflow.StatefulOnboarding.FunctionApp.Repositories.CustomerMasterSystem.Models;
 using Microsoft.Data.SqlClient;
-using Microsoft.Extensions.Configuration;
 
-namespace ABC.Workflow.StatefulOnboarding.FunctionApp.Repositories;
+namespace ABC.Workflow.StatefulOnboarding.FunctionApp.Repositories.CustomerMasterSystem;
 
-public class SqlWorkflowAuditRepository : IWorkflowAuditRepository
+public class CustomerMasterSystemWorkflowAuditRepository : IWorkflowAuditRepository
 {
-    private readonly IConfiguration _configuration;
+    private readonly SqlConnectionFactory _sqlConnectionFactory;
 
-    public SqlWorkflowAuditRepository(IConfiguration configuration)
+    public CustomerMasterSystemWorkflowAuditRepository(SqlConnectionFactory sqlConnectionFactory)
     {
-        _configuration = configuration;
+        _sqlConnectionFactory = sqlConnectionFactory;
     }
 
-    private SqlConnection CreateConnection()
-    {
-        var connectionString = _configuration["SqlConnectionString"];
-
-        if (string.IsNullOrWhiteSpace(connectionString))
-        {
-            throw new InvalidOperationException("SqlConnectionString is missing from configuration.");
-        }
-
-        return new SqlConnection(connectionString);
-    }
-
-    public async Task CreateAsync(WorkflowAuditRecord record, CancellationToken cancellationToken = default)
+    public async Task CreateAsync(
+        WorkflowAuditRecord record,
+        CancellationToken cancellationToken = default)
     {
         const string sql = @"
-INSERT INTO dbo.CustomerOnboardingData
+INSERT INTO dbo.WorkflowRequests
 (
     ApplicationId,
     InstanceId,
@@ -68,7 +58,7 @@ VALUES
     @LastUpdatedAtUtc
 );";
 
-        await using var connection = CreateConnection();
+        await using var connection = _sqlConnectionFactory.CreateConnection();
         await connection.OpenAsync(cancellationToken);
 
         await using var command = new SqlCommand(sql, connection);
@@ -93,10 +83,12 @@ VALUES
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
-    public async Task UpdateAsync(WorkflowAuditUpdate update, CancellationToken cancellationToken = default)
+    public async Task UpdateAsync(
+        WorkflowAuditUpdate update,
+        CancellationToken cancellationToken = default)
     {
         const string sql = @"
-UPDATE dbo.CustomerOnboardingData
+UPDATE dbo.WorkflowRequests
 SET
     WorkflowStatus = @WorkflowStatus,
     CurrentStage = @CurrentStage,
@@ -105,7 +97,7 @@ SET
     LastUpdatedAtUtc = @LastUpdatedAtUtc
 WHERE InstanceId = @InstanceId;";
 
-        await using var connection = CreateConnection();
+        await using var connection = _sqlConnectionFactory.CreateConnection();
         await connection.OpenAsync(cancellationToken);
 
         await using var command = new SqlCommand(sql, connection);

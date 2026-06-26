@@ -2,6 +2,7 @@ using ABC.Workflow.StatefulOnboarding.FunctionApp.Models.Requests;
 using ABC.Workflow.StatefulOnboarding.FunctionApp.Models.Domain;
 using ABC.Workflow.StatefulOnboarding.FunctionApp.Functions.Durable.Activities;
 using ABC.Workflow.StatefulOnboarding.FunctionApp.Common.Helpers;
+using ABC.Workflow.StatefulOnboarding.FunctionApp.Repositories.CustomerMasterSystem.Models;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.DurableTask;
 

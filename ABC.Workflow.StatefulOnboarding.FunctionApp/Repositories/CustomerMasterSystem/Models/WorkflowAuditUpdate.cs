@@ -1,4 +1,4 @@
-namespace ABC.Workflow.StatefulOnboarding.FunctionApp.Models.Domain;
+namespace ABC.Workflow.StatefulOnboarding.FunctionApp.Repositories.CustomerMasterSystem.Models;
 
 public class WorkflowAuditUpdate
 {

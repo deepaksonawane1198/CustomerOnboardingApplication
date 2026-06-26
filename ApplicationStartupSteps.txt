@@ -1,0 +1,54 @@
+Steps to run application:
+
+Step 1 - Open Terminal
+Step 2 - cd src
+Step 3 - cd ABC.Workflow.StatefulOnboarding.FunctionApp
+Step 4 - dotnet restore
+Step 5 - dotnet build
+Step 6 - azurite --skipApiVersionCheck
+Step 7 - func start
+
+------------------------------------------------------------------------------------------------------------------------------------
+launch.json
+
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": ".NET Isolated Attach",
+      "type": "coreclr",
+      "request": "attach",
+      "processId": "${command:pickProcess}"
+    }
+  ]
+}
+------------------------------------------------------------------------------------------------------------------------------------
+npm install -g azurite
+azurite --skipApiVersionCheck
+------------------------------------------------------------------------------------------------------------------------------------
+Database Design - 
+
+CREATE TABLE dbo.CustomerOnboardingData
+(
+    Id INT IDENTITY(1,1) PRIMARY KEY,
+    ApplicationId NVARCHAR(100) NOT NULL,
+    InstanceId NVARCHAR(100) NOT NULL UNIQUE,
+    ApplicantType NVARCHAR(50) NULL,
+    CompanyName NVARCHAR(250) NULL,
+    TaxId NVARCHAR(100) NULL,
+    Country NVARCHAR(20) NULL,
+    ContactEmail NVARCHAR(200) NULL,
+    SourceSystem NVARCHAR(100) NULL,
+
+    WorkflowStatus NVARCHAR(50) NOT NULL,
+    CurrentStage NVARCHAR(100) NULL,
+    FinalReason NVARCHAR(500) NULL,
+    DownstreamRecordId NVARCHAR(100) NULL,
+
+    RequestPayloadJson NVARCHAR(MAX) NOT NULL,
+
+    SubmittedAtUtc DATETIME2 NOT NULL,
+    CreatedAtUtc DATETIME2 NOT NULL,
+    LastUpdatedAtUtc DATETIME2 NOT NULL
+);
+------------------------------------------------------------------------------------------------------------------------------------

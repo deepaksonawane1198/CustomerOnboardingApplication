@@ -1,4 +1,6 @@
-using ABC.Workflow.StatefulOnboarding.FunctionApp;
+using ABC.Workflow.StatefulOnboarding.FunctionApp.Repositories.CustomerMasterSystem;
+using ABC.Workflow.StatefulOnboarding.FunctionApp.Common.Connectors;
+using ABC.Workflow.StatefulOnboarding.FunctionApp.Repositories.CustomerMasterSystem.Interfaces;
 using ABC.Workflow.StatefulOnboarding.FunctionApp.Services;
 using ABC.Workflow.StatefulOnboarding.FunctionApp.Repositories;
 using ABC.Workflow.StatefulOnboarding.FunctionApp.Services.Interfaces;
@@ -22,7 +24,8 @@ var host = new HostBuilder()
         services.AddSingleton<IComplianceService, ComplianceService>();
         services.AddSingleton<IFraudService, FraudService>();
         services.AddSingleton<IProvisioningService, ProvisioningService>();
-        services.AddSingleton<IWorkflowAuditRepository, SqlWorkflowAuditRepository>();
+        services.AddSingleton<IWorkflowAuditRepository, CustomerMasterSystemWorkflowAuditRepository>();
+        services.AddSingleton<SqlConnectionFactory>();
     })
     .Build();
 

@@ -1,6 +1,6 @@
-using ABC.Workflow.StatefulOnboarding.FunctionApp.Models.Domain;
+using ABC.Workflow.StatefulOnboarding.FunctionApp.Repositories.CustomerMasterSystem.Models;
 
-namespace ABC.Workflow.StatefulOnboarding.FunctionApp.Services.Interfaces;
+namespace ABC.Workflow.StatefulOnboarding.FunctionApp.Repositories.CustomerMasterSystem.Interfaces;
 
 public interface IWorkflowAuditRepository
 {

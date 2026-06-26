@@ -1,41 +1,78 @@
 ABC.Workflow.StatefulOnboarding.FunctionApp/
 │
 ├── Common/
+│   ├── Connectors/
+│   │   └── SqlConnectionFactory.cs
+│   │
 │   ├── Helpers/
+│   │   └── (WorkflowConstants.cs, Validators, etc.)
+│   │
 │   ├── Logging/
-│   ├── Exceptions/
-│   └── Connectors/
-│       ├── Http/
-│       └── Sftp/
+│   └── Exceptions/
+│
+├── Repositories/
+│   └── CustomerMasterSystem/
+│       │
+│       ├── Interfaces/
+│       │   └── IWorkflowAuditRepository.cs
+│       │
+│       ├── Models/
+│       │   ├── WorkflowAuditRecord.cs
+│       │   └── WorkflowAuditUpdate.cs
+│       │
+│		├── InMemoryDuplicateRepository.cs
+│       └── CustomerMasterSystemWorkflowAuditRepository.cs
 │
 ├── Functions/
 │   ├── Http/
-│   ├── Sftp/
-│   ├── Durable/
-│   │   ├── Orchestrators/
-│   │   └── Activities/
-│   └── Health/
-│
-├── Models/
-│   ├── Requests/
-│   ├── Responses/
-│   ├── Events/
-│   └── Domain/
+│   │   ├── StartOnboardingFunction.cs
+│   │   ├── ApprovalCallbackFunction.cs
+│   │   └── GetWorkflowStatusFunction.cs
+│   │
+│   └── Durable/
+│       ├── Orchestrators/
+│       │   └── OnboardingOrchestrator.cs
+│       │
+│       └── Activities/
+│           ├── ValidatePayloadActivity.cs
+│           ├── ValidateDocumentsActivity.cs
+│           ├── DuplicateCheckActivity.cs
+│           ├── ComplianceCheckActivity.cs
+│           ├── FraudCheckActivity.cs
+│           ├── ProvisionVendorActivity.cs
+│           ├── CompensationActivity.cs
+│           └── UpdateWorkflowAuditActivity.cs
 │
 ├── Services/
 │   ├── Interfaces/
-│   └── Services.cs
+│   │   ├── IComplianceService.cs
+│   │   ├── IFraudService.cs
+│   │   ├── IProvisioningService.cs
+│   │   └── IDuplicateRepository.cs
+│   │
+│   └── Implementations/
+│       ├── ComplianceService.cs
+│       ├── FraudService.cs
+│       └── ProvisioningService.cs
 │
-├── Repositories/
-│   ├── Database/
-│   ├── ServiceBus/
-│   ├── Sql/
-│   └── ThirdParty/
+├── Models/
+│   ├── Requests/
+│   │   ├── OnboardingRequest.cs
+│   │   └── ApprovalRequest.cs
+│   │
+│   ├── Responses/
+│   │   ├── WorkflowStartResponse.cs
+│   │   └── WorkflowStatusResponse.cs
+│   │
+│   └── Domain/
+│       ├── CheckResult.cs
+│       ├── ProvisioningResult.cs
+│       ├── WorkflowExecutionResult.cs
+│       ├── ApprovalDecision.cs
+│       └── WorkflowSettings.cs
 │
-├── OpenApi/
-│
+├── Program.cs
+├── appsettings.json
 ├── host.json
 ├── local.settings.json
-├── appsettings.json
-├── Program.cs
-└── ABC.Workflow.StatefulOnboarding.FunctionApp.csproj
+└── ABC_Workflow_StatefulOnboarding_FunctionApp.csproj
