@@ -19,7 +19,7 @@ public class CustomerMasterSystemWorkflowAuditRepository : IWorkflowAuditReposit
         CancellationToken cancellationToken = default)
     {
         const string sql = @"
-INSERT INTO dbo.WorkflowRequests
+INSERT INTO dbo.CustomerOnboardingData
 (
     ApplicationId,
     InstanceId,
@@ -88,7 +88,7 @@ VALUES
         CancellationToken cancellationToken = default)
     {
         const string sql = @"
-UPDATE dbo.WorkflowRequests
+UPDATE dbo.CustomerOnboardingData
 SET
     WorkflowStatus = @WorkflowStatus,
     CurrentStage = @CurrentStage,

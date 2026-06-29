@@ -11,17 +11,17 @@ ABC.Workflow.StatefulOnboarding.FunctionApp/
 │   └── Exceptions/
 │
 ├── Repositories/
-│   └── CustomerMasterSystem/
-│       │
-│       ├── Interfaces/
-│       │   └── IWorkflowAuditRepository.cs
-│       │
-│       ├── Models/
-│       │   ├── WorkflowAuditRecord.cs
-│       │   └── WorkflowAuditUpdate.cs
-│       │
-│		├── InMemoryDuplicateRepository.cs
-│       └── CustomerMasterSystemWorkflowAuditRepository.cs
+│   ├── CustomerMasterSystem/
+│   │   │
+│   │   ├── Interfaces/
+│   │   │   └── IWorkflowAuditRepository.cs
+│   │   │
+│   │   ├── Models/
+│   │   │   ├── WorkflowAuditRecord.cs
+│   │   │   └── WorkflowAuditUpdate.cs
+│   │   │
+│   │   └── CustomerMasterSystemWorkflowAuditRepository.cs
+│   ├── InMemoryDuplicateRepository.cs
 │
 ├── Functions/
 │   ├── Http/
@@ -50,10 +50,10 @@ ABC.Workflow.StatefulOnboarding.FunctionApp/
 │   │   ├── IProvisioningService.cs
 │   │   └── IDuplicateRepository.cs
 │   │
-│   └── Implementations/
-│       ├── ComplianceService.cs
-│       ├── FraudService.cs
-│       └── ProvisioningService.cs
+│   ├── OnboardingRequestValidator.cs
+│   ├── ComplianceService.cs
+│   ├── FraudService.cs
+│   └── ProvisioningService.cs
 │
 ├── Models/
 │   ├── Requests/
@@ -66,6 +66,7 @@ ABC.Workflow.StatefulOnboarding.FunctionApp/
 │   │
 │   └── Domain/
 │       ├── CheckResult.cs
+│       ├── DocumentMetadata.cs
 │       ├── ProvisioningResult.cs
 │       ├── WorkflowExecutionResult.cs
 │       ├── ApprovalDecision.cs

@@ -1,6 +1,6 @@
 using ABC.Workflow.StatefulOnboarding.FunctionApp.Models.Requests;
 
-namespace ABC.Workflow.StatefulOnboarding.FunctionApp.Common.Helpers;
+namespace ABC.Workflow.StatefulOnboarding.FunctionApp.Services;
 
 public static class OnboardingRequestValidator
 {
