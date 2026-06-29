@@ -5,15 +5,12 @@ using ABC.Workflow.StatefulOnboarding.FunctionApp.Models.Responses;
 using ABC.Workflow.StatefulOnboarding.FunctionApp.Functions.Durable.Orchestrators;
 using ABC.Workflow.StatefulOnboarding.FunctionApp.Repositories.CustomerMasterSystem.Models;
 using ABC.Workflow.StatefulOnboarding.FunctionApp.Repositories.CustomerMasterSystem.Interfaces;
-using Microsoft.Azure.Functions.Worker.Extensions.OpenApi;
-using Microsoft.OpenApi.Models;
-using System.Net;
+using Microsoft.Azure.WebJobs.Extensions.OpenApi.Core.Attributes;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.DurableTask.Client;
 using Microsoft.Extensions.Logging;
-
-
+using ParameterLocation = Microsoft.OpenApi.Models.ParameterLocation;
 
 namespace ABC.Workflow.StatefulOnboarding.FunctionApp.Functions.Http;
 
@@ -29,6 +26,22 @@ public class StartOnboardingFunction
     }
 
     [Function(nameof(StartOnboardingFunction))]
+    [OpenApiOperation(
+        operationId: "StartOnboarding",
+        tags: new[] { "Workflow" },
+        Summary = "Start onboarding workflow",
+        Description = "Starts a new onboarding durable workflow instance.")]
+    [OpenApiRequestBody(
+        contentType: "application/json",
+        bodyType: typeof(OnboardingRequest),
+        Required = true,
+        Description = "Onboarding request payload")]
+    [OpenApiResponseWithBody(
+        statusCode: HttpStatusCode.Accepted,
+        contentType: "application/json",
+        bodyType: typeof(WorkflowStartResponse),
+        Description = "Workflow started successfully")]
+
     public async Task<HttpResponseData> Run(
         [HttpTrigger(AuthorizationLevel.Function, "post", Route = "workflow/start")] HttpRequestData req,
         [DurableClient] DurableTaskClient durableClient)

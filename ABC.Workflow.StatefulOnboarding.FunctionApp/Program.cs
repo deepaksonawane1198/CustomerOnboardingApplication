@@ -5,15 +5,17 @@ using ABC.Workflow.StatefulOnboarding.FunctionApp.Services;
 using ABC.Workflow.StatefulOnboarding.FunctionApp.Repositories;
 using ABC.Workflow.StatefulOnboarding.FunctionApp.Services.Interfaces;
 using ABC.Workflow.StatefulOnboarding.FunctionApp.Models.Domain;
+using Microsoft.Azure.Functions.Worker.Extensions.OpenApi.Extensions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
 
 var host = new HostBuilder()
-    .ConfigureFunctionsWorkerDefaults()
+    .ConfigureFunctionsWorkerDefaults(worker =>{worker.UseNewtonsoftJson();}).ConfigureOpenApi()
     .ConfigureAppConfiguration((context, config) =>
     {
+        config.SetBasePath(Directory.GetCurrentDirectory());
         config.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
               .AddEnvironmentVariables();
     })
