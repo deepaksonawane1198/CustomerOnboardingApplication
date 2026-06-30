@@ -111,4 +111,28 @@ WHERE InstanceId = @InstanceId;";
 
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
+
+    public async Task<bool> IsDuplicateAsync(
+    string taxId,
+    string currentInstanceId,
+    CancellationToken cancellationToken = default)
+{
+    const string sql = @"
+SELECT COUNT(1)
+FROM dbo.CustomerOnboardingData
+WHERE TaxId = @TaxId
+  AND InstanceId <> @CurrentInstanceId;";
+
+    await using var connection = _sqlConnectionFactory.CreateConnection();
+    await connection.OpenAsync(cancellationToken);
+
+    await using var command = new SqlCommand(sql, connection);
+
+    command.Parameters.AddWithValue("@TaxId", taxId);
+    command.Parameters.AddWithValue("@CurrentInstanceId", currentInstanceId);
+
+    var result = (int)await command.ExecuteScalarAsync(cancellationToken);
+
+    return result > 0;
+}
 }

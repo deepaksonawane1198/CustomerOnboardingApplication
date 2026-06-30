@@ -32,11 +32,29 @@ public class OnboardingOrchestrator
             return await RejectAsync(context, result, validationResult.Reason, "Rejected");
         }
 
+        
+        var duplicateResult = await context.CallActivityAsync<CheckResult>(nameof(DuplicateCheckActivity),new DuplicateCheckRequest
+        {
+            InstanceId = context.InstanceId,
+            Request = request
+        });
+
+        if (!duplicateResult.IsSuccess)
+        {
+            return await RejectAsync(context, result, duplicateResult.Reason, "Rejected");
+        }
+
+        var docResult = await context.CallActivityAsync<CheckResult>(nameof(ValidateDocumentsActivity),request);
+        result.StageResults.Add(docResult);
+
+        if (!docResult.IsSuccess)
+        {
+            return await RejectAsync(context, result, docResult.Reason, "Rejected");
+        }
+
         // Step 2 - Run all 4 checks in parallel
         var checks = new[]
         {
-            context.CallActivityAsync<CheckResult>(nameof(ValidateDocumentsActivity), request),
-            context.CallActivityAsync<CheckResult>(nameof(DuplicateCheckActivity), request),
             context.CallActivityAsync<CheckResult>(nameof(ComplianceCheckActivity), request),
             context.CallActivityAsync<CheckResult>(nameof(FraudCheckActivity), request)
         };

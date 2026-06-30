@@ -8,6 +8,11 @@ Step 5 - dotnet build
 Step 6 - azurite --skipApiVersionCheck
 Step 7 - func start
 
+http://localhost:7071/api/swagger/ui      ✅ Swagger UI
+http://localhost:7071/api/openapi/v3.json ✅ OpenAPI JSON
+
+https://customeronboardingapplication-ajefdnekd5hudggq.centralindia-01.azurewebsites.net/api/swagger/ui      ✅ Swagger UI
+https://customeronboardingapplication-ajefdnekd5hudggq.centralindia-01.azurewebsites.net/api/openapi/v3.json ✅ OpenAPI JSON
 ------------------------------------------------------------------------------------------------------------------------------------
 launch.json
 
@@ -50,5 +55,15 @@ CREATE TABLE dbo.CustomerOnboardingData
     SubmittedAtUtc DATETIME2 NOT NULL,
     CreatedAtUtc DATETIME2 NOT NULL,
     LastUpdatedAtUtc DATETIME2 NOT NULL
+);
+
+CREATE TABLE dbo.WorkflowRequests
+(
+    Id INT IDENTITY(1,1) PRIMARY KEY,
+    ApplicationId NVARCHAR(50) NULL,
+    InstanceId NVARCHAR(100) NULL,
+    TaxId NVARCHAR(50) NULL,
+    WorkflowStatus NVARCHAR(50) NULL,
+    CreatedAtUtc DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME()
 );
 ------------------------------------------------------------------------------------------------------------------------------------

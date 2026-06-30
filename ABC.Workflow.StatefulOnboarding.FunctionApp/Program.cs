@@ -22,7 +22,6 @@ var host = new HostBuilder()
     .ConfigureServices((context, services) =>
     {
         services.Configure<WorkflowSettings>(context.Configuration.GetSection("WorkflowSettings"));
-        services.AddSingleton<IDuplicateRepository, InMemoryDuplicateRepository>();
         services.AddSingleton<IComplianceService, ComplianceService>();
         services.AddSingleton<IFraudService, FraudService>();
         services.AddSingleton<IProvisioningService, ProvisioningService>();

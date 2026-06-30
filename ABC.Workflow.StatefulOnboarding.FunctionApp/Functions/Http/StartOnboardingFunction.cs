@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text.Json;
+
 using ABC.Workflow.StatefulOnboarding.FunctionApp.Models.Requests;
 using ABC.Workflow.StatefulOnboarding.FunctionApp.Models.Responses;
 using ABC.Workflow.StatefulOnboarding.FunctionApp.Functions.Durable.Orchestrators;
@@ -10,6 +11,7 @@ using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.DurableTask.Client;
 using Microsoft.Extensions.Logging;
+using Microsoft.DurableTask;
 using ParameterLocation = Microsoft.OpenApi.Models.ParameterLocation;
 
 namespace ABC.Workflow.StatefulOnboarding.FunctionApp.Functions.Http;
@@ -57,9 +59,7 @@ public class StartOnboardingFunction
             return badResponse;
         }
 
-        var instanceId = await durableClient.ScheduleNewOrchestrationInstanceAsync(
-            nameof(OnboardingOrchestrator),
-            request);
+        var instanceId = Guid.NewGuid().ToString("N");
 
         await _workflowAuditRepository.CreateAsync(new WorkflowAuditRecord
         {
@@ -80,6 +80,8 @@ public class StartOnboardingFunction
             CreatedAtUtc = DateTime.UtcNow,
             LastUpdatedAtUtc = DateTime.UtcNow
         });
+
+        await durableClient.ScheduleNewOrchestrationInstanceAsync(new TaskName(nameof(OnboardingOrchestrator)),request,new StartOrchestrationOptions(instanceId),CancellationToken.None);
 
         _logger.LogInformation("Started onboarding orchestration. InstanceId={InstanceId}, ApplicationId={ApplicationId}",
             instanceId, request.ApplicationId);

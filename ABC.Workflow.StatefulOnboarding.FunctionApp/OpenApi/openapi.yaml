@@ -1,0 +1,260 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "Customer Onboarding API",
+    "description": "Stateful onboarding workflow using Azure Durable Functions and APIM.",
+    "contact": {
+      "name": "Deepak Sonawane"
+    },
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "https://customeronboardingapplication-ajefdnekd5hudggq.centralindia-01.azurewebsites.net/api"
+    }
+  ],
+  "paths": {
+    "/workflow/status/{instanceId}": {
+      "get": {
+        "tags": [
+          "Workflow"
+        ],
+        "summary": "Get workflow status",
+        "description": "Returns durable workflow runtime status and output.",
+        "operationId": "GetWorkflowStatus",
+        "parameters": [
+          {
+            "name": "instanceId",
+            "in": "path",
+            "description": "Durable workflow instance id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Workflow status response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/workflowStatusResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Workflow instance not found"
+          }
+        }
+      }
+    },
+    "/workflow/approve/{instanceId}": {
+      "post": {
+        "tags": [
+          "Workflow"
+        ],
+        "summary": "Approve or reject workflow",
+        "description": "Raises manual approval event for a running durable workflow instance.",
+        "operationId": "ApproveWorkflow",
+        "parameters": [
+          {
+            "name": "instanceId",
+            "in": "path",
+            "description": "Durable workflow instance id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Approval decision payload",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/approvalRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Approval event accepted"
+          }
+        }
+      }
+    },
+    "/workflow/start": {
+      "post": {
+        "tags": [
+          "Workflow"
+        ],
+        "summary": "Start onboarding workflow",
+        "description": "Starts a new onboarding durable workflow instance.",
+        "operationId": "StartOnboarding",
+        "requestBody": {
+          "description": "Onboarding request payload",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/onboardingRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Workflow started successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/workflowStartResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "operationId": "HealthCheck",
+        "responses": {
+          "200": {
+            "description": "Health check response",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "approvalRequest": {
+        "type": "object",
+        "properties": {
+          "approved": {
+            "type": "boolean"
+          },
+          "reviewedBy": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "documentMetadata": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "fileName": {
+            "type": "string"
+          }
+        }
+      },
+      "onboardingRequest": {
+        "type": "object",
+        "properties": {
+          "applicationId": {
+            "type": "string"
+          },
+          "applicantType": {
+            "type": "string"
+          },
+          "companyName": {
+            "type": "string"
+          },
+          "taxId": {
+            "type": "string"
+          },
+          "country": {
+            "type": "string"
+          },
+          "contactEmail": {
+            "type": "string"
+          },
+          "riskScore": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "documents": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/documentMetadata"
+            }
+          },
+          "sourceSystem": {
+            "type": "string"
+          },
+          "submittedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "workflowStartResponse": {
+        "type": "object",
+        "properties": {
+          "instanceId": {
+            "type": "string"
+          },
+          "applicationId": {
+            "type": "string"
+          },
+          "statusQueryUri": {
+            "type": "string"
+          },
+          "approvalCallbackUri": {
+            "type": "string"
+          }
+        }
+      },
+      "workflowStatusResponse": {
+        "type": "object",
+        "properties": {
+          "instanceId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "runtimeStatus": {
+            "type": "string"
+          },
+          "input": {
+            "type": "object"
+          },
+          "output": {
+            "type": "object"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "lastUpdatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        }
+      }
+    }
+  }
+}
